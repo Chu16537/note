@@ -16,10 +16,10 @@ gantt
          Unity: done, 2018-02, 2020-02
 
       section 工作-天堂遊戲
-         nodeJS&Golang: done, 2020-06, 2023-01
+         nodeJS & Golang: done, 2020-06, 2023-01
 
       section 工作-祥捷
-         typeScript&vue&mongo: done, 2023-02, 2023-06
+         typeScript & vue & mongo: done, 2023-02, 2023-06
 
 ```
 
