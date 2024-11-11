@@ -1,9 +1,12 @@
-我的名字叫陳有信，年齡 28 歲。住在新北市中和區一帶，未婚。我曾在天堂遊戲上班。每天最晚也是七點前回家。不抽煙，酒也是淺嘗輒止。晚上一點睡，保證六個小時的充足睡眠。睡前，我一定玩幾場遊戲，再做 0 分鐘的柔軟操，上了床，馬上熟睡。一覺到天亮，疲勞和壓力也會留到第二天。醫生都說我很不正常。  
+我的名字叫陳有信，年齡 29 歲。住在新北市中和區一帶，未婚。我曾在天堂遊戲上班。每天最晚也是七點前回家。不抽煙，也不喝酒。晚上一點睡，保證六個小時的充足睡眠。睡前，我一定玩幾場遊戲，再做 0 分鐘的柔軟操，上了床，馬上熟睡。一覺到天亮，疲勞和壓力也會留到第二天。醫生都說我很不正常。  
 我的意思是我是一個隨時都想追求平靜生活的人，不拘泥於勝負與煩惱，不樹立令我夜不能寐的程式碼，這就是我對於這個社會的生活態度，我也清楚這就是我的幸福。再說，就算是 <font color="#ff0000">DeBug</font> 我也不會輸給任何人。
 
 <div align="center">
 <img src=./images/killerQueen.jpg width=200px/>
 </div>
+
+
+# 工作經歷
 
 ```mermaid
 gantt
@@ -13,19 +16,21 @@ gantt
 	axisFormat  %Y-%m
 
       section 亞思博
-         Unity: done, 2018-02, 2020-02
+         asiapacdigital: done, 2018-02, 2020-02
 
       section 天堂遊戲
-         nodeJS & Golang: done, 2020-06, 2023-01
+         paradise: done, 2020-06, 2023-01
 
       section 祥捷
-         typeScript & vue & mongo: done, 2023-02, 2023-06
+         top path: done, 2023-02, 2023-06
 
       section 帆達
-         go & mysql: done, 2023-08, 2023-12
+         fangdat: done, 2023-08, 2023-12
+
+      section 艾爾默
+         elmo: done, 2024-03, 2025-12
 ```
 
-# 工作經歷
 
 # 亞思博
 
@@ -92,13 +97,66 @@ gantt
    1. 捕魚 bug
       - 捕魚遊戲存在打死道具魚無法派彩問題，都使用人工進行補償派彩，後來整理好文檔&詢問多位僅存的人員，才讓問題定位完成。
 
+# 艾爾默
+
+1. 工作內容:
+   1. golang 服務開發
+   1. 與第三方錢包對接，錢包系統開發
+   1. 模擬第三方平台服務(原本公司都要手動魔改資料到DB才可以進行遊戲)
+   1. 多款 slot 遊戲開發不同款遊戲(數值給輪帶)
+   1. 開發 可水平擴展webserver,並選擇一位leader
+   1. [Live slot 遊戲開發](https://www.youtube.com/watch?v=TsjkEVsPSIM)
+   1. 架構優化
+      1. 使用 gin & gorm 插件
+      2. 調整架構方便程式碼單元測試＆維護
+      ```
+      原本的sql語法都是請dba寫好直接寫入程式碼，對於相同資料表查詢，指示因為參數不同而產生越多func，導致開發發上維護困難
+         
+         修改前
+
+         aa.getToken(token)
+            ("SELECT * FROM aa WHERE token = ?", token)
+         
+         aa.getAccount(account)
+            ("SELECT * FROM aa WHERE account = ?", account)
+         
+         aa.getAccountAndToken(account,token)
+            ("SELECT * FROM aa WHERE account = ? AND token = ?", account,token)
+
+         修改後
+            
+         type AaOpt struct {
+            Token    string
+            Account  string
+         }
+
+         func (o *AaOpt) Where(tx *gorm.DB) *gorm.DB {
+            if o.Token != "" {
+         	   tx = tx.Where("token = ?", o.Token)
+            }
+            if o.Account != "" {
+         	   tx = tx.Where("account = ?", o.Account)
+            }
+            return tx
+         }
+         
+         opt := &AaOpt{
+         	Account: account,
+         }
+
+         aas, err := h.AaGet(opt)
+      ```
+
+
+
+
 ## 其他練習
 
 1. [k8s](https://github.com/Chu16537/Notes-k8s):基礎 k8s 架設&yaml 設定練習
-1. [grpc](https://github.com/Chu16537/gRPC): 練習
-1. [lineBot](https://github.com/Chu16537/lineBot):lineBot + mongo + Go Gin
-1. [vue](https://github.com/Chu16537/project_b_clientWeb/tree/member_vue):練習用 vue，創建基礎的模板功能
-1. [model](https://github.com/Chu16537/gomodule): 逐步建立自己的工具庫
+2. [grpc](https://github.com/Chu16537/gRPC): 練習
+3. [lineBot](https://github.com/Chu16537/lineBot):lineBot + mongo + Go Gin
+4. [vue](https://github.com/Chu16537/project_b_clientWeb/tree/member_vue):練習用 vue，創建基礎的模板功能
+5. [model](https://github.com/Chu16537/gomodule): 逐步建立自己的工具庫
 
 ## 使用工具
 
@@ -112,7 +170,8 @@ gantt
    1. mysql
 1. MQ：
    1. NATS
-1. 容器
+   2. redis
+2. 容器
    1. docker
 
 ---
