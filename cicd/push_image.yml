@@ -1,0 +1,92 @@
+name: Build and Push Docker Image to GCR # 工作流程名稱
+
+on:
+  push:
+    tags:
+      - "v*" # 當 tag 以 'v' 開頭時觸發，例如 v1.0.0
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # 在 Ubuntu 最新版本執行
+
+    permissions:
+      contents: read # 允許讀取程式碼
+      id-token: write # 允許 OIDC 身份驗證（用於 GCP 授權）
+
+    steps:
+      - name: Checkout code # 1️⃣ 取得專案原始碼
+        uses: actions/checkout@v3
+
+      - name: Get Go version from go.mod # 2️⃣ 從 go.mod 讀取 Go 版本
+        id: go-version
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const goModContent = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'go.mod'
+            });
+            const goMod = Buffer.from(goModContent.data.content, 'base64').toString();
+            const goVersion = goMod.match(/go (\d+\.\d+)/)[1];
+            core.setOutput('GO_VERSION', goVersion);
+
+      - name: Set up Go # 3️⃣ 設定 Go 環境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ steps.go-version.outputs.GO_VERSION }} # 使用剛剛讀取的 Go 版本
+
+      - name: Build Docker image # 4️⃣ 建置 Docker 映像檔
+        run: |
+          docker build \
+            --build-arg GO_VERSION=${{ steps.go-version.outputs.GO_VERSION }} \
+            --build-arg VERSION=${{ github.ref_name }} \
+            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            -t {gcp存放位置}-docker.pkg.dev/{專案ID}/{image存放資料夾}/{服務名稱}:${{ github.ref_name }} \
+            -t {gcp存放位置}-docker.pkg.dev/{專案ID}/{image存放資料夾}/{服務名稱}:latest .
+
+      # Google Artifact Registry (GAR) 或 Google Container Registry (GCR) 域名，表示映像檔將推送到 亞洲東部（asia-east1）區域的 GCP 儲存庫。
+      # GCP_PROJECT_ID ,GCP 專案名稱，這是 GCP 中的專案 ID
+      # ARTIFACT_REGISTRY_NAME 容器映像檔儲存庫名稱,在gcp查詢 artifact registry,可以查到儲存庫,看起來像資料夾
+      # IMAGE_NAME 映像檔名稱
+      # ${{ github.ref_name }} 取得當前 tag
+
+      - name: Configure GCR Credentials # 5️⃣ 設定 GCP 身份驗證
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCR_JSON_KEY }} # 使用 GitHub Secrets 來存取 GCP 認證
+      # GCR_JSON_KEY 名稱要跟 github secret 名稱一樣,其他是固定格式
+      
+      - name: Configure Docker to use Artifact Registry # 6️⃣ 設定 Docker 推送到 GCR
+        run: gcloud auth configure-docker {gcp存放位置}-docker.pkg.dev
+
+      - name: Push Docker image to GCR # 7️⃣ 推送 Docker 映像檔到 GCR
+        run: |
+          docker push {gcp存放位置}-docker.pkg.dev/{專案ID}/{image存放資料夾}/{服務名稱}:${{ github.ref_name }}
+          docker push {gcp存放位置}-docker.pkg.dev/{專案ID}/{image存放資料夾}/{服務名稱}:latest 
+      # 路徑跟 docker build 的路徑相同
+      # 額外推送 latest 標籤的映像檔
+
+      - name: Authenticate with GKE
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCR_JSON_KEY }} # 也可以直接使用服務帳戶金鑰
+
+      - name: Install gke-gcloud-auth-plugin
+        run: gcloud components install gke-gcloud-auth-plugin
+
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials {k8s群集名稱} \
+            --region={gcp存放位置} \
+            --project={專案ID}
+
+      - name: Deploy to GKE
+        run: |
+          kubectl rollout restart deployment {服務名稱}
